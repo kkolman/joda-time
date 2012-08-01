@@ -17,6 +17,7 @@ package org.joda.time.format;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.text.DateFormatSymbols;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -29,10 +30,11 @@ import org.joda.time.Chronology;
 import org.joda.time.DateTimeConstants;
 import org.joda.time.DateTimeField;
 import org.joda.time.DateTimeFieldType;
+import org.joda.time.DateTimeUtils;
 import org.joda.time.DateTimeZone;
 import org.joda.time.MutableDateTime;
-import org.joda.time.ReadablePartial;
 import org.joda.time.MutableDateTime.Property;
+import org.joda.time.ReadablePartial;
 import org.joda.time.field.MillisDurationField;
 import org.joda.time.field.PreciseDateTimeField;
 
@@ -2547,11 +2549,31 @@ public class DateTimeFormatterBuilder {
                     }
                 }
             }
+            if (best == null || (best != null && best.length() < str.length())) {
+                DateTimeZone exactAbbreviationMatch = getTimeZoneIdByLocaleSpecificAbbreviation(str);
+                if (exactAbbreviationMatch != null) {
+                    bucket.setZone(exactAbbreviationMatch);
+                    return position + str.length();
+                }
+            }
             if (best != null) {
                 bucket.setZone(DateTimeZone.forID(best));
                 return position + best.length();
             }
             return ~position;
+        }
+
+        private DateTimeZone getTimeZoneIdByLocaleSpecificAbbreviation(String abbr) {
+            DateFormatSymbols dateFormatSymbols = DateTimeUtils.getDateFormatSymbols(Locale.getDefault());
+            for (String[] zoneStrings : dateFormatSymbols.getZoneStrings()) {
+                String zoneId = zoneStrings[0];
+                for (int i=1; i<5; i++) {
+                    if (abbr.equals(zoneStrings[i])) {
+                        return DateTimeZone.forID(zoneId);
+                    }
+                }
+            }
+            return null;
         }
     }
 
