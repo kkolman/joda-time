@@ -2550,10 +2550,10 @@ public class DateTimeFormatterBuilder {
                 }
             }
             if (best == null || (best != null && best.length() < str.length())) {
-                DateTimeZone exactAbbreviationMatch = getTimeZoneIdByLocaleSpecificAbbreviation(str);
-                if (exactAbbreviationMatch != null) {
-                    bucket.setZone(exactAbbreviationMatch);
-                    return position + str.length();
+                String[] jdkMatch = attemptToMatchTimeZoneIdByLocaleSpecificAbbreviation(str, best);
+                if (jdkMatch[1] != null) {
+                    bucket.setZone(DateTimeZone.forID(jdkMatch[1]));
+                    return position + jdkMatch[0].length();
                 }
             }
             if (best != null) {
@@ -2563,17 +2563,22 @@ public class DateTimeFormatterBuilder {
             return ~position;
         }
 
-        private DateTimeZone getTimeZoneIdByLocaleSpecificAbbreviation(String abbr) {
+        private String[] attemptToMatchTimeZoneIdByLocaleSpecificAbbreviation(String abbr, String best) {
+            String matchedZoneId = null;
             DateFormatSymbols dateFormatSymbols = DateTimeUtils.getDateFormatSymbols(Locale.getDefault());
             for (String[] zoneStrings : dateFormatSymbols.getZoneStrings()) {
                 String zoneId = zoneStrings[0];
-                for (int i=1; i<5; i++) {
-                    if (abbr.equals(zoneStrings[i])) {
-                        return DateTimeZone.forID(zoneId);
+                for (int i = 1; i < 5; i++) {
+                    String id = zoneStrings[i];
+                    if (abbr.startsWith(id)) {
+                        if (best == null || id.length() > best.length()) {
+                            best = id;
+                            matchedZoneId = zoneId;
+                        }
                     }
                 }
             }
-            return null;
+            return new String[] { best, matchedZoneId };
         }
     }
 
